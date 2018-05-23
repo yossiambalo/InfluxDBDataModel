@@ -54,7 +54,7 @@ public class Producer {
                             System.out.println("Key: "+s +" Value: "+ payload.get(s));
                         }
                     }
-                    System.out.println(counter+"---> Country [code= " + customerData[4] + " , name=" + customerData[5] + "]");
+                    //System.out.println(counter+"---> Country [code= " + customerData[4] + " , name=" + customerData[5] + "]");
                 }
                 counter++;
             }
