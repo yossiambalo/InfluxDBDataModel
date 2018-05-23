@@ -23,12 +23,14 @@ public class PayloadHandler {
     private Map<String,String> action = new HashMap<>();
     private List<Map<String,String>> tendrs = new ArrayList<>();
     private List<Map<String,String>> tender = new ArrayList<>();
+    private Map<String,String> additionalData = new HashMap<>();
 
     public List<Map<String, String>> getPlayedItems() {
         return playedItems;
     }
 
-    public PayloadHandler(String payLoad){
+    public PayloadHandler(String payLoad,Map<String,String> additionalData){
+        this.additionalData = additionalData;
         byte[] decodedBytes = Base64.decodeBase64(payLoad);
         String json = decompress(decodedBytes);
         getDatAndPopulateCollections(json);
@@ -60,6 +62,7 @@ public class PayloadHandler {
                 //System.out.println(key + ":" + jsonObject2.get(key));
                 playedItem.put(key, jsonObject2.getString(key));
             }
+            playedItem.putAll(additionalData);
             playedItems.add(playedItem);
         }
     }
