@@ -1,7 +1,10 @@
 package com.odysii.influx;
 import org.apache.commons.codec.binary.Base64;
+import org.json.JSONObject;
 
-import javax.json.*;
+import javax.json.JsonArray;
+import javax.json.JsonObject;
+import javax.json.JsonValue;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -11,9 +14,9 @@ import java.util.*;
 import java.util.zip.GZIPInputStream;
 
 public class PayloadHandler {
-    private Map<String,String> baskets = new HashMap<>();
+    private Map<String,String> event = new HashMap<>();
     private Map<String,String> line;
-    private List<Map<String,String>> basket = new ArrayList<>();
+    private List<Map<String,String>> events = new ArrayList<>();
     private List<Map<String,String>> lines = new ArrayList<>();
     private Map<String,String> loyalities = new HashMap<>();
     private Map<String,String> loyality = new HashMap<>();
@@ -35,14 +38,43 @@ public class PayloadHandler {
         String json = decompress(decodedBytes);
         getDatAndPopulateCollections(json);
     }
+    public PayloadHandler(String json){
+        getDatAndPopulateCollections(json);
+    }
+
+    public List<Map<String, String>> getEvents() {
+        return events;
+    }
 
     private void getDatAndPopulateCollections(String json) {
-        JsonReader jsonReader = Json.createReader(new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)));
-        JsonObject object = jsonReader.readObject();
+//        JsonObject object = (JsonObject) JSONSerializer.toJSON(json );
+//        JsonReader jsonReader = Json.createReader(new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)));
+//        JsonObject object = jsonReader.readObject();
+        JSONObject jsonObject = new JSONObject(json);
+        Iterator iterator = jsonObject.keys();
+        while (iterator.hasNext()) {
+            JSONObject object = new JSONObject(jsonObject.get((String)iterator.next()).toString());
+            collectData(object);
+            //jsonObject.get((String)iterator.next());
+        }
+        System.out.println();
+        //jsonObject.getJSONObject("1462").get("SiteId");
         //object.getJsonObject("POS").getJsonArray("Basket");
-        setPlayedItems(object.getJsonArray("PlayedItems"));
+        //setPlayedItems(object.getJSONArray("PlayedItems"));
         //setLines(object.getJsonObject("POS").getJsonArray("Lines"));
-        jsonReader.close();
+
+    }
+
+    private void collectData(JSONObject object) {
+        event = new HashMap<>();
+        Iterator iterator = object.keys();
+        while (iterator.hasNext()) {
+            String key = (String) iterator.next();
+            String value =   object.get(key).equals(null) ? "" :  String.valueOf((object.get(key)));
+           event.put(key,value);
+            //jsonObject.get((String)iterator.next());
+        }
+        events.add(event);
     }
 
     private void setPlayedItems(JsonArray jsonArray) {

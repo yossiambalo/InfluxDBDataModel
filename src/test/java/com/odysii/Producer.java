@@ -2,22 +2,39 @@ package com.odysii;
 
 import com.odysii.influx.InfluxDBHandler;
 import com.odysii.influx.PayloadHandler;
+import com.odysii.influx.payload.MeasurementType;
+import sun.misc.IOUtils;
 
-import javax.swing.plaf.metal.MetalBorders;
-import java.io.BufferedReader;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 public class Producer {
+    static InfluxDBHandler influxDBHandler;
     public static void main(String[]args){
+        influxDBHandler = new InfluxDBHandler("10.28.76.120","8086","root","root","TestData");
+        influxDBHandler.connect();
+        influxDBHandler.createDB();
+        String filename = "C:\\yossi\\documents\\projectiD_1234_create.json";
+        String content = null;
+        String measurement = "events_"+filename.split("_")[1];
+        try {
+            content = new String(Files.readAllBytes(Paths.get(filename)));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        PayloadHandler payloadHandler = new PayloadHandler(content);
+        List<Map<String,String>> events = payloadHandler.getEvents();
+        for (Map<String,String> event : events){
+            influxDBHandler.produceEvents(measurement,event);
+        }
 
-        readCsv();
-//        InfluxDBHandler influxDBHandler = new InfluxDBHandler("10.28.76.120","8086","root","root","yossi");
-//        influxDBHandler.connect();
+        influxDBHandler.getData(measurement);
+//        readCsv();
+        //influxDBHandler.deleteDB();
 //        try {
 //            influxDBHandler.produce();
 //        } catch (InterruptedException e) {
@@ -52,7 +69,7 @@ public class Producer {
                     additionalData.put("Id",customerData[0]);
                     additionalData.put("ChannelId",customerData[1]);
                     additionalData.put("SiteId",customerData[2]);
-                    additionalData.put("ProjectId",customerData[3]);
+                    //additionalData.put("ProjectId",customerData[3]);
                     additionalData.put("PosId",customerData[4]);
                     additionalData.put("TransactionGuid",customerData[5]);
                     additionalData.put("TransactionTime",customerData[6]);
@@ -60,15 +77,17 @@ public class Producer {
                     additionalData.put("ProcessStatus",customerData[8]);
                     PayloadHandler payloadHandler = new PayloadHandler(customerData[10],additionalData);
                     List<Map<String,String>> playedItems = payloadHandler.getPlayedItems();
-                    for (Map<String,String> playedItem : playedItems){
-                        for (String s : playedItem.keySet()){
-                            System.out.println("Key: "+s +" Value: "+ playedItem.get(s));
-                        }
-                    }
+                    influxDBHandler.producePlayedItems(customerData[3],playedItems);
+//                    for (Map<String,String> playedItem : playedItems){
+//                        for (String s : playedItem.keySet()){
+//                            System.out.println("Key: "+s +" Value: "+ playedItem.get(s));
+//                        }
+//                    }
                     //System.out.println(counter+"---> Country [code= " + customerData[4] + " , name=" + customerData[5] + "]");
                 }
                 counter++;
             }
+            //influxDBHandler.getData();
 
         } catch (FileNotFoundException e) {
             e.printStackTrace();
