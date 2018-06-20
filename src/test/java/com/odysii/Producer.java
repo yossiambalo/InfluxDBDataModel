@@ -1,107 +1,56 @@
 package com.odysii;
 
 import com.odysii.influx.InfluxDBHandler;
-import com.odysii.influx.PayloadHandler;
-import com.odysii.influx.payload.MeasurementType;
-import sun.misc.IOUtils;
+import com.odysii.influx.JsonHandler;
+import com.sun.net.httpserver.HttpExchange;
+import com.sun.net.httpserver.HttpHandler;
+import com.sun.net.httpserver.HttpServer;
 
-import java.io.*;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.net.InetSocketAddress;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executors;
 
 public class Producer {
-    static InfluxDBHandler influxDBHandler;
-    public static void main(String[]args){
-        influxDBHandler = new InfluxDBHandler("10.28.76.120","8086","root","root","TestData");
+    private final static String JSON_DIR = "\\\\orion\\Public\\SysQA\\Odysii\\Odysii Installers\\Solutions\\C-Store 4\\QA\\influx\\";
+    static InfluxDBHandler influxDBHandler = new InfluxDBHandler("10.28.76.120","8086","root","root","TestData");
+    public static void main(String[] args) throws Exception {
         influxDBHandler.connect();
         influxDBHandler.createDB();
-        String filename = "C:\\yossi\\documents\\projectiD_1234_create.json";
-        String content = null;
-        String measurement = "events_"+filename.split("_")[1];
-        try {
-            content = new String(Files.readAllBytes(Paths.get(filename)));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        PayloadHandler payloadHandler = new PayloadHandler(content);
-        List<Map<String,String>> events = payloadHandler.getEvents();
-        for (Map<String,String> event : events){
-            influxDBHandler.produceEvents(measurement,event);
-        }
-
-        influxDBHandler.getData(measurement);
-//        readCsv();
-        //influxDBHandler.deleteDB();
-//        try {
-//            influxDBHandler.produce();
-//        } catch (InterruptedException e) {
-//            e.printStackTrace();
-//        }
-//        try {
-//            influxDBHandler.getData();
-//        } catch (InterruptedException e) {
-//            e.printStackTrace();
-//        }
-//        influxDBHandler.createDB();
-//        influxDBHandler.createData();
-//        influxDBHandler.getData();
+        HttpServer server = HttpServer.create(new InetSocketAddress(1818), 0);
+        server.createContext("/influx/producer", new MyHandler());
+        server.setExecutor(Executors.newFixedThreadPool(10));
+        server.start();
     }
 
-    private static void readCsv(){
-        String csvFile = "C:\\yossi\\documents\\Trans_cg1004_r.csv";
-        BufferedReader br = null;
-        String line = "";
-        String cvsSplitBy = ",";
-
-        try {
-
-            int counter = 0;
-            br = new BufferedReader(new FileReader(csvFile));
-            while ((line = br.readLine()) != null) {
-
-                if (counter >= 1){
-                    // use comma as separator
-                    String[] customerData = line.split(cvsSplitBy);
-                    Map<String,String> additionalData = new HashMap<>();
-                    additionalData.put("Id",customerData[0]);
-                    additionalData.put("ChannelId",customerData[1]);
-                    additionalData.put("SiteId",customerData[2]);
-                    //additionalData.put("ProjectId",customerData[3]);
-                    additionalData.put("PosId",customerData[4]);
-                    additionalData.put("TransactionGuid",customerData[5]);
-                    additionalData.put("TransactionTime",customerData[6]);
-                    additionalData.put("TransactionDate",customerData[7]);
-                    additionalData.put("ProcessStatus",customerData[8]);
-                    PayloadHandler payloadHandler = new PayloadHandler(customerData[10],additionalData);
-                    List<Map<String,String>> playedItems = payloadHandler.getPlayedItems();
-                    influxDBHandler.producePlayedItems(customerData[3],playedItems);
-//                    for (Map<String,String> playedItem : playedItems){
-//                        for (String s : playedItem.keySet()){
-//                            System.out.println("Key: "+s +" Value: "+ playedItem.get(s));
-//                        }
-//                    }
-                    //System.out.println(counter+"---> Country [code= " + customerData[4] + " , name=" + customerData[5] + "]");
-                }
-                counter++;
+    static class MyHandler implements HttpHandler {
+        public void handle(HttpExchange t) throws IOException {
+            String response = "This is the response";
+            String uri = t.getRequestURI().toString();
+            String fileName = JSON_DIR+uri.split("=")[1]+".json";
+            //String fileName = "\\\\orion\\Public\\SysQA\\Odysii\\Odysii Installers\\Solutions\\C-Store 4\\QA\\influx\\ProjectId_553_chunk_0_create_at_2018-06-17.json";
+            String measurement = "events_"+fileName.split("_")[1];
+            String content = null;
+            //String measurement = ProjectId_123456_chunk_0_create_at_2018-06-17
+            try {
+                content = new String(Files.readAllBytes(Paths.get(fileName)));
+            } catch (IOException e) {
+                e.printStackTrace();
             }
-            //influxDBHandler.getData();
-
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } finally {
-            if (br != null) {
-                try {
-                    br.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+            JsonHandler jsonHandler = new JsonHandler(content);
+            List<Map<String,String>> events = jsonHandler.getEvents();
+            for (Map<String,String> event : events){
+                influxDBHandler.produceEvents(measurement,event);
             }
+            influxDBHandler.getData(measurement);
+            t.sendResponseHeaders(200, response.length());
+            OutputStream os = t.getResponseBody();
+            os.write(response.getBytes());
+            os.close();
         }
-
     }
 }

@@ -101,7 +101,6 @@ public class InfluxDBHandler {
 
     }
     public void produceEvents(String measurement,Map<String,String> events) {
-        //String dbName = "write_unittest_" + System.currentTimeMillis();
         this.measurement = measurement;
         String rp = defaultRetentionPolicy(this.influxDB.version());
         BatchPoints batchPoints = BatchPoints.database(dbName).retentionPolicy(rp).build();
@@ -109,14 +108,13 @@ public class InfluxDBHandler {
         Point point = null;
         Point.Builder builder = Point.measurement(measurement);
         for (String event : events.keySet()){
-            if (event.equals("ChannelId") || event.equals("SiteId")){
-                builder.addField(event,events.get(event));
-            }else
+            if (event.equals("ChannelId") || event.equals("SiteId") || event.equals("Type") || event.equals("TransId")){
                 builder.tag(event,events.get(event));
+            }else
+                builder.addField(event,events.get(event));
         }
         point = builder.time(System.currentTimeMillis(), TimeUnit.MILLISECONDS).build();
         batchPoints.point(point);
-        //batchPoints.point(point1);
         influxDB.write(batchPoints);
     }
     public void produceExample() throws InterruptedException {

@@ -5,15 +5,15 @@ import org.json.JSONObject;
 import javax.json.JsonArray;
 import javax.json.JsonObject;
 import javax.json.JsonValue;
-import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.zip.GZIPInputStream;
 
-public class PayloadHandler {
+public class JsonHandler {
     private Map<String,String> event = new HashMap<>();
     private Map<String,String> line;
     private List<Map<String,String>> events = new ArrayList<>();
@@ -32,37 +32,42 @@ public class PayloadHandler {
         return playedItems;
     }
 
-    public PayloadHandler(String payLoad,Map<String,String> additionalData){
+    public JsonHandler(String payLoad, Map<String,String> additionalData){
         this.additionalData = additionalData;
         byte[] decodedBytes = Base64.decodeBase64(payLoad);
         String json = decompress(decodedBytes);
         getDatAndPopulateCollections(json);
     }
-    public PayloadHandler(String json){
+    public JsonHandler(String json){
         getDatAndPopulateCollections(json);
     }
 
+    void post(String s)throws Exception{
+        URL url = new URL("http://yossia:8070/CashRegisterService/AddToBasket");
+        URLConnection con = url.openConnection();
+        HttpURLConnection http = (HttpURLConnection)con;
+        http.setRequestMethod("POST"); // PUT is another valid option
+        http.setDoOutput(true);
+        byte[] out = s.getBytes(StandardCharsets.UTF_8);
+        int length = out.length;
+        http.setFixedLengthStreamingMode(length);
+        http.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
+        http.connect();
+        try(OutputStream os = http.getOutputStream()) {
+            os.write(out);
+        }
+    }
     public List<Map<String, String>> getEvents() {
         return events;
     }
 
     private void getDatAndPopulateCollections(String json) {
-//        JsonObject object = (JsonObject) JSONSerializer.toJSON(json );
-//        JsonReader jsonReader = Json.createReader(new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)));
-//        JsonObject object = jsonReader.readObject();
         JSONObject jsonObject = new JSONObject(json);
         Iterator iterator = jsonObject.keys();
         while (iterator.hasNext()) {
             JSONObject object = new JSONObject(jsonObject.get((String)iterator.next()).toString());
             collectData(object);
-            //jsonObject.get((String)iterator.next());
         }
-        System.out.println();
-        //jsonObject.getJSONObject("1462").get("SiteId");
-        //object.getJsonObject("POS").getJsonArray("Basket");
-        //setPlayedItems(object.getJSONArray("PlayedItems"));
-        //setLines(object.getJsonObject("POS").getJsonArray("Lines"));
-
     }
 
     private void collectData(JSONObject object) {
@@ -72,7 +77,6 @@ public class PayloadHandler {
             String key = (String) iterator.next();
             String value =   object.get(key).equals(null) ? "" :  String.valueOf((object.get(key)));
            event.put(key,value);
-            //jsonObject.get((String)iterator.next());
         }
         events.add(event);
     }
