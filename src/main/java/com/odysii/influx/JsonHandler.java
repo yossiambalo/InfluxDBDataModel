@@ -1,5 +1,7 @@
 package com.odysii.influx;
 import org.apache.commons.codec.binary.Base64;
+import org.apache.log4j.Logger;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import javax.json.JsonArray;
@@ -14,6 +16,7 @@ import java.util.*;
 import java.util.zip.GZIPInputStream;
 
 public class JsonHandler {
+    private Logger LOGGER = Logger.getLogger(JsonHandler.class);
     private Map<String,String> event = new HashMap<>();
     private Map<String,String> line;
     private List<Map<String,String>> events = new ArrayList<>();
@@ -62,7 +65,12 @@ public class JsonHandler {
     }
 
     private void getDatAndPopulateCollections(String json) {
-        JSONObject jsonObject = new JSONObject(json);
+        JSONObject jsonObject = null;
+       try {
+           jsonObject = new JSONObject(json);
+       }catch (JSONException e){
+           LOGGER.error("Not a valid json: "+e.getMessage());
+       }
         Iterator iterator = jsonObject.keys();
         while (iterator.hasNext()) {
             JSONObject object = new JSONObject(jsonObject.get((String)iterator.next()).toString());

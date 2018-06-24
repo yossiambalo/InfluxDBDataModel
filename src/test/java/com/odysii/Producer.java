@@ -5,6 +5,7 @@ import com.odysii.influx.JsonHandler;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
+import org.apache.log4j.Logger;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -16,6 +17,7 @@ import java.util.Map;
 import java.util.concurrent.Executors;
 
 public class Producer {
+    private static final Logger LOGGER = Logger.getLogger(Producer.class);
     private final static String JSON_DIR = "\\\\orion\\Public\\SysQA\\Odysii\\Odysii Installers\\Solutions\\C-Store 4\\QA\\influx\\";
     static InfluxDBHandler influxDBHandler = new InfluxDBHandler("10.28.76.120","8086","root","root","TestData");
     public static void main(String[] args) throws Exception {
@@ -28,18 +30,17 @@ public class Producer {
     }
 
     static class MyHandler implements HttpHandler {
-        public void handle(HttpExchange t) throws IOException {
+        public void handle(HttpExchange t) {
             String response = "This is the response";
             String uri = t.getRequestURI().toString();
-            String fileName = JSON_DIR+uri.split("=")[1]+".json";
-            //String fileName = "\\\\orion\\Public\\SysQA\\Odysii\\Odysii Installers\\Solutions\\C-Store 4\\QA\\influx\\ProjectId_553_chunk_0_create_at_2018-06-17.json";
-            String measurement = "events_"+fileName.split("_")[1];
+            String measurement = null;
             String content = null;
-            //String measurement = ProjectId_123456_chunk_0_create_at_2018-06-17
-            try {
+            try{
+            String fileName = JSON_DIR+uri.split("=")[1]+".json";
+            measurement = "events_"+fileName.split("_")[1];
                 content = new String(Files.readAllBytes(Paths.get(fileName)));
-            } catch (IOException e) {
-                e.printStackTrace();
+            } catch (Exception e) {
+               LOGGER.error("Failed to read file content: "+e.fillInStackTrace());
             }
             JsonHandler jsonHandler = new JsonHandler(content);
             List<Map<String,String>> events = jsonHandler.getEvents();
@@ -47,10 +48,21 @@ public class Producer {
                 influxDBHandler.produceEvents(measurement,event);
             }
             influxDBHandler.getData(measurement);
-            t.sendResponseHeaders(200, response.length());
-            OutputStream os = t.getResponseBody();
-            os.write(response.getBytes());
-            os.close();
+            OutputStream os = null;
+            try
+            {
+                t.sendResponseHeaders(200, response.length());
+                os = t.getResponseBody();
+                os.write(response.getBytes());
+            }catch (IOException e){
+                LOGGER.error(e.fillInStackTrace());
+            }finally {
+                try {
+                    os.close();
+                } catch (IOException e) {
+                    LOGGER.error(e.fillInStackTrace());
+                }
+            }
         }
     }
 }

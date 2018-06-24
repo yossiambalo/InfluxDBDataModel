@@ -147,7 +147,7 @@ public class InfluxDBHandler {
             this.influxDB.query(query, 5, queue::add);
 
             Thread.sleep(2000);
-            this.influxDB.deleteDatabase(dbName);
+            //this.influxDB.deleteDatabase(dbName);
 
             QueryResult result;
             do {
