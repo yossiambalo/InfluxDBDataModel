@@ -27,6 +27,7 @@ public class Producer {
         server.createContext("/influx/producer", new MyHandler());
         server.setExecutor(Executors.newFixedThreadPool(10));
         server.start();
+        LOGGER.info("==========Server started successfully!================");
     }
 
     static class MyHandler implements HttpHandler {
