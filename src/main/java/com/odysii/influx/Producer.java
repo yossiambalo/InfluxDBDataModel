@@ -1,7 +1,5 @@
-package com.odysii;
+package com.odysii.influx;
 
-import com.odysii.influx.InfluxDBHandler;
-import com.odysii.influx.JsonHandler;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
@@ -48,7 +46,7 @@ public class Producer {
             for (Map<String,String> event : events){
                 influxDBHandler.produceEvents(measurement,event);
             }
-            influxDBHandler.getData(measurement);
+            //influxDBHandler.getData(measurement);
             OutputStream os = null;
             try
             {

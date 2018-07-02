@@ -40,6 +40,8 @@ public class InfluxDBHandler {
     }
     public void connect(){
         influxDB = InfluxDBFactory.connect("http://"+host+":"+port, user, pass);
+        //TODO: Do not delte db
+        this.influxDB.deleteDatabase(dbName);
     }
     public void createDB(){
         this.influxDB.createDatabase(dbName);
@@ -106,14 +108,22 @@ public class InfluxDBHandler {
         BatchPoints batchPoints = BatchPoints.database(dbName).retentionPolicy(rp).build();
 
         Point point = null;
+        long actualTime = 0L;
         Point.Builder builder = Point.measurement(measurement);
         for (String event : events.keySet()){
+            if (event.equals("ActualTime")){
+                actualTime = Long.parseLong(events.get(event));
+                continue;
+            }
             if (event.equals("ChannelId") || event.equals("SiteId") || event.equals("Type") || event.equals("TransId")){
                 builder.tag(event,events.get(event));
+            }else if (event.equals("DPCSubject") || event.equals("Code")){
+                builder.tag(event,events.get(event));
+                builder.addField(event,events.get(event));
             }else
                 builder.addField(event,events.get(event));
         }
-        point = builder.time(System.currentTimeMillis(), TimeUnit.MILLISECONDS).build();
+        point = builder.time(actualTime, TimeUnit.MILLISECONDS).build();
         batchPoints.point(point);
         influxDB.write(batchPoints);
     }
